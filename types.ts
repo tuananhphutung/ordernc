@@ -20,7 +20,7 @@ export interface MenuItem {
   id: string;
   name: string;
   price: number;
-  category: 'drink' | 'topping'; // Đổi từ food sang drink
+  category: 'drink' | 'topping';
   image?: string;
   stock: number;
   isParent?: boolean;
@@ -31,16 +31,16 @@ export interface CartItem extends MenuItem {
   quantity: number;
 }
 
-// Chỉ giữ lại nguồn đơn tại quán (app)
 export type OrderSource = 'app';
 
 export interface Order {
   id: string;
   items: CartItem[];
   total: number;
-  paymentMethod: 'cash' | 'transfer' | 'postpaid'; // Bổ sung postpaid
+  paymentMethod: 'cash' | 'transfer' | 'postpaid';
   status: 'pending' | 'completed';
   timestamp: number;
+  orderDate: number; // Ngày ghi nhận doanh thu (có thể khác timestamp)
   staffId: string;
   source: OrderSource;
   customerName?: string;
