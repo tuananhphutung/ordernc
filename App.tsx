@@ -43,6 +43,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubUsers = db.collection('nc_users').onSnapshot((snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User));
+        
+        // Kiểm tra xem có nhân viên mới đăng ký không để thông báo cho Admin
+        if (currentUser?.role === 'admin') {
+            const newPending = items.filter(u => u.status === 'pending').length;
+            const prevPending = users.filter(u => u.status === 'pending').length;
+            if (newPending > prevPending) {
+                setToast({ message: "Có nhân viên mới vừa đăng ký! Hãy kiểm tra danh sách chờ.", type: 'info' });
+                playNotificationSound();
+            }
+        }
+
         setUsers(items);
         const savedUserId = localStorage.getItem('nc_saved_user_id');
         if (currentUser) {
@@ -71,7 +82,7 @@ const App: React.FC = () => {
     const unsubNotifs = db.collection('nc_notifications').orderBy('timestamp', 'desc').onSnapshot(s => setNotifications(s.docs.map(d => ({ id: d.id, ...d.data() } as Notification))));
 
     return () => { unsubUsers(); unsubMenu(); unsubOrders(); unsubShifts(); unsubCheckIns(); unsubNotifs(); };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, users.length]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsLoggingIn(true);
@@ -86,8 +97,33 @@ const App: React.FC = () => {
         db.collection('nc_users').doc(user.id).update({ isOnline: true });
         setCurrentUser(user);
         localStorage.setItem('nc_saved_user_id', user.id);
+    } else if (user && user.status === 'pending') {
+        alert('Tài khoản của bạn đang chờ Admin duyệt. Vui lòng quay lại sau!');
     } else alert('Thông tin sai hoặc chưa kích hoạt');
     setIsLoggingIn(false);
+  };
+
+  const handleRegister = async (data: { name: string, phone: string, password: string }) => {
+    const existing = users.find(u => u.username === data.phone || u.phone === data.phone);
+    if (existing) {
+        setToast({ message: "Số điện thoại này đã tồn tại trên hệ thống!", type: 'error' });
+        return;
+    }
+    try {
+        await db.collection('nc_users').add({
+            name: data.name,
+            username: data.phone,
+            phone: data.phone,
+            password: data.password,
+            role: 'staff',
+            status: 'pending',
+            isOnline: false,
+            createdAt: Date.now()
+        });
+        setToast({ message: "Đăng ký thành công! Vui lòng chờ Admin duyệt tài khoản.", type: 'success' });
+    } catch (e) {
+        setToast({ message: "Lỗi đăng ký. Vui lòng thử lại sau.", type: 'error' });
+    }
   };
 
   const handleLogout = async () => {
@@ -143,7 +179,7 @@ const App: React.FC = () => {
               <span className="font-medium text-gray-500">Đang tải Order Nước...</span>
           </div>
       ) : !currentUser ? (
-        <LoginForm onSubmit={handleLogin} onRegister={(d) => alert("Chờ admin duyệt")} />
+        <LoginForm onSubmit={handleLogin} onRegister={handleRegister} />
       ) : (
         currentUser.role === 'admin' ? (
             <AdminLayout 

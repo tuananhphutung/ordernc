@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { User } from '../../types';
-import { UserPlus, Lock, Unlock, Trash2, Check, Eye, EyeOff, UserCheck, ShieldAlert, Clock } from 'lucide-react';
+import { UserPlus, Lock, Unlock, Trash2, Check, Eye, EyeOff, UserCheck, ShieldAlert, Clock, AlertCircle } from 'lucide-react';
 import { db } from '../../firebase';
 
 interface StaffManagerProps {
@@ -59,8 +59,8 @@ const StaffManager: React.FC<StaffManagerProps> = ({ users }) => {
 
   return (
     <div className="p-4 md:p-8 pb-32 animate-in fade-in">
-      {/* Overview Cards - Giống ảnh mẫu */}
-      <div className="space-y-4 mb-10">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
          <div className="bg-white p-6 rounded-[24px] shadow-sm border border-indigo-50 flex items-center justify-between">
             <div className="space-y-1">
                 <p className="text-gray-500 text-sm font-medium">Tổng nhân viên</p>
@@ -75,38 +75,49 @@ const StaffManager: React.FC<StaffManagerProps> = ({ users }) => {
             </div>
             <div className="bg-green-50 p-4 rounded-full text-green-600"><Check size={28}/></div>
          </div>
-         <div className="bg-white p-6 rounded-[24px] shadow-sm border border-indigo-50 flex items-center justify-between">
+         <div className={`p-6 rounded-[24px] shadow-sm border flex items-center justify-between transition-all ${pendingStaff.length > 0 ? 'bg-orange-50 border-orange-200 animate-pulse' : 'bg-white border-indigo-50'}`}>
             <div className="space-y-1">
                 <p className="text-gray-500 text-sm font-medium">Chờ duyệt</p>
-                <p className="text-3xl font-black text-orange-600">{pendingStaff.length}</p>
+                <p className={`text-3xl font-black ${pendingStaff.length > 0 ? 'text-orange-600' : 'text-gray-400'}`}>{pendingStaff.length}</p>
             </div>
-            <div className="bg-orange-50 p-4 rounded-full text-orange-600"><Clock size={28}/></div>
+            <div className={`${pendingStaff.length > 0 ? 'bg-orange-500 text-white shadow-lg' : 'bg-orange-50 text-orange-600'} p-4 rounded-full`}>
+                <Clock size={28}/>
+            </div>
          </div>
       </div>
 
-      {/* Yêu cầu tham gia mới - Giống hệt ảnh bạn gửi */}
+      {/* Yêu cầu tham gia mới */}
       {pendingStaff.length > 0 && (
           <div className="mb-12">
-            <h3 className="text-lg font-black text-gray-800 mb-6 flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500"></span> Yêu cầu tham gia mới
-            </h3>
-            <div className="space-y-4">
+            <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-black text-gray-800 flex items-center gap-2">
+                    <AlertCircle className="text-orange-500 animate-bounce" size={24} /> 
+                    Yêu cầu tham gia mới ({pendingStaff.length})
+                </h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {pendingStaff.map(u => (
-                    <div key={u.id} className="bg-white p-6 rounded-[24px] shadow-sm border border-gray-100 animate-in slide-in-from-left-4">
+                    <div key={u.id} className="bg-white p-6 rounded-[24px] shadow-lg border-2 border-orange-100 animate-in slide-in-from-left-4 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-3">
+                            <span className="bg-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase">Mới</span>
+                        </div>
                         <div className="mb-6">
-                            <p className="font-black text-gray-800 text-lg">{u.name}</p>
-                            <p className="text-gray-500 text-sm mt-1">SĐT: {u.phone || u.username}</p>
+                            <p className="font-black text-gray-800 text-lg uppercase tracking-tight">{u.name}</p>
+                            <p className="text-gray-500 text-sm mt-1 flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                SĐT: {u.phone || u.username}
+                            </p>
                         </div>
                         <div className="flex gap-3">
                             <button 
                                 onClick={() => updateUserStatus(u.id, 'active')} 
-                                className="flex-1 bg-[#10b981] text-white py-3.5 rounded-xl font-bold text-sm shadow-md shadow-green-100 hover:bg-green-600 active:scale-95 transition-all"
+                                className="flex-1 bg-green-600 text-white py-3.5 rounded-xl font-bold text-sm shadow-md shadow-green-100 hover:bg-green-700 active:scale-95 transition-all"
                             >
-                                Duyệt
+                                Duyệt ngay
                             </button>
                             <button 
                                 onClick={() => updateUserStatus(u.id, 'delete')} 
-                                className="flex-1 bg-[#fee2e2] text-[#ef4444] py-3.5 rounded-xl font-bold text-sm hover:bg-red-100 active:scale-95 transition-all"
+                                className="flex-1 bg-red-50 text-red-500 py-3.5 rounded-xl font-bold text-sm hover:bg-red-100 active:scale-95 transition-all"
                             >
                                 Từ chối
                             </button>
@@ -124,7 +135,7 @@ const StaffManager: React.FC<StaffManagerProps> = ({ users }) => {
           onClick={() => setIsAdding(!isAdding)} 
           className="w-full md:w-auto bg-[#0f172a] text-white px-6 py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 hover:bg-gray-800 shadow-lg shadow-gray-200"
         >
-            <UserPlus size={18} /> Thêm nhân viên
+            <UserPlus size={18} /> Thêm nhân viên mới
         </button>
       </div>
 
@@ -179,6 +190,9 @@ const StaffManager: React.FC<StaffManagerProps> = ({ users }) => {
                             </td>
                         </tr>
                     ))}
+                    {activeStaff.length === 0 && lockedStaff.length === 0 && (
+                        <tr><td colSpan={3} className="px-6 py-10 text-center text-gray-400 italic">Chưa có nhân viên nào trong danh sách.</td></tr>
+                    )}
                 </tbody>
             </table>
         </div>
