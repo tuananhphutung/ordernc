@@ -43,14 +43,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-indigo-50/20 flex-col md:flex-row">
-      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b z-40 flex items-center justify-between px-6">
+      {/* Mobile Top Header (Đã bỏ nút Thoát) */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b z-40 flex items-center px-6">
           <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-lg">NC</div>
               <span className="font-black text-gray-800 text-sm uppercase tracking-tighter">Admin Nước</span>
           </div>
-          <button onClick={() => onLogout()} className="px-4 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-widest border border-red-100 shadow-sm active:scale-95 transition-all">Thoát</button>
       </div>
 
+      {/* Desktop Sidebar */}
       <div className="hidden md:flex w-64 h-full bg-slate-900 text-white flex-col shadow-2xl z-50">
         <div className="p-8 border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -79,6 +80,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         </div>
       </div>
 
+      {/* Main Content Area */}
       <div className="flex-1 overflow-auto pt-16 pb-20 md:pt-0 md:pb-0 h-full">
         {activeTab === 'dashboard' && <Dashboard adminUser={user} users={users} orders={orders} shifts={shifts} />}
         {activeTab === 'revenue' && <RevenueReport adminUser={user} orders={orders} users={users} />}
@@ -87,12 +89,22 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
         {activeTab === 'shifts' && <ShiftManager users={users} shifts={shifts} setShifts={setShifts} checkIns={checkIns} onNotify={onNotify} />}
       </div>
 
+      {/* Mobile Bottom Navigation (Thêm nút Thoát xuống dưới) */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t z-40 flex justify-between px-2 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
           <NavItem id="dashboard" icon={LayoutDashboard} label="Admin" />
           <NavItem id="revenue" icon={BarChart2} label="Báo cáo" />
           <NavItem id="inventory" icon={Package} label="Món NC" />
           <NavItem id="staff" icon={Users} label="N.Sự" />
           <NavItem id="shifts" icon={CalendarClock} label="Lịch" />
+          <button 
+            onClick={() => onLogout()} 
+            className="flex flex-col items-center justify-center w-full py-2 text-red-400 active:scale-95 transition-all"
+          >
+              <div className="p-1.5 rounded-xl bg-red-50 shadow-sm">
+                  <LogOut size={20} />
+              </div>
+              <span className="text-[8px] font-black mt-1 uppercase tracking-widest">Thoát</span>
+          </button>
       </div>
     </div>
   );
