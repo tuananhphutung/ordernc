@@ -43,7 +43,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   return (
     <div className="flex h-screen bg-indigo-50/20 flex-col md:flex-row">
-      {/* Mobile Top Header (Đã bỏ nút Thoát) */}
+      {/* Mobile Top Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-md border-b z-40 flex items-center px-6">
           <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-black text-xs shadow-lg">NC</div>
@@ -82,14 +82,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto pt-16 pb-20 md:pt-0 md:pb-0 h-full">
-        {activeTab === 'dashboard' && <Dashboard adminUser={user} users={users} orders={orders} shifts={shifts} />}
-        {activeTab === 'revenue' && <RevenueReport adminUser={user} orders={orders} users={users} />}
+        {activeTab === 'dashboard' && <Dashboard adminUser={user} users={users} orders={orders} shifts={shifts} onNavigate={(tab) => setActiveTab(tab)} />}
+        {activeTab === 'revenue' && <RevenueReport adminUser={user} orders={orders} users={users} menuItems={menuItems} />}
         {activeTab === 'inventory' && <InventoryManager menuItems={menuItems} setMenuItems={setMenuItems} />}
         {activeTab === 'staff' && <StaffManager users={users} setUsers={setUsers} />}
         {activeTab === 'shifts' && <ShiftManager users={users} shifts={shifts} setShifts={setShifts} checkIns={checkIns} onNotify={onNotify} />}
       </div>
 
-      {/* Mobile Bottom Navigation (Thêm nút Thoát xuống dưới) */}
+      {/* Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t z-40 flex justify-between px-2 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.05)]">
           <NavItem id="dashboard" icon={LayoutDashboard} label="Admin" />
           <NavItem id="revenue" icon={BarChart2} label="Báo cáo" />

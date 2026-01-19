@@ -1,11 +1,11 @@
 
 import React, { useState, useMemo } from 'react';
-import { Order, User } from '../../types';
+import { Order, User, MenuItem } from '../../types';
 import { 
   Calendar, CreditCard, Wallet, TrendingUp, Search, 
   Clock, Trash2, Filter, ChevronDown, ChevronUp, 
   User as UserIcon, ArrowUpDown, CalendarDays, FileText,
-  Download, Printer, RefreshCcw
+  Download, Printer, RefreshCcw, Coffee
 } from 'lucide-react';
 import { db } from '../../firebase';
 
@@ -13,9 +13,10 @@ interface RevenueReportProps {
   orders: Order[];
   adminUser: User;
   users: User[];
+  menuItems: MenuItem[];
 }
 
-const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users }) => {
+const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users, menuItems }) => {
   const [startDate, setStartDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [endDate, setEndDate] = useState(new Date().toLocaleDateString('en-CA'));
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,6 +25,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
   // Advanced Filters
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState('all');
+  const [selectedItemId, setSelectedItemId] = useState('all');
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
   const [sortBy, setSortBy] = useState<'time-desc' | 'time-asc' | 'price-desc' | 'price-asc'>('time-desc');
@@ -65,13 +67,14 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
     };
   }, [orders, startDate, endDate]);
 
-  // 2. Danh sách đơn hàng đã lọc theo Tab và Search
+  // 2. Danh sách đơn hàng đã lọc theo Tab, Search và Món
   const filteredOrders = useMemo(() => {
     let result = orders.filter(o => {
       const orderDateStr = new Date(o.orderDate || o.timestamp).toLocaleDateString('en-CA');
       const matchesDate = orderDateStr >= startDate && orderDateStr <= endDate;
       const matchesTab = activeTab === 'all' || o.paymentMethod === activeTab;
       const matchesStaff = selectedStaffId === 'all' || o.staffId === selectedStaffId;
+      const matchesItem = selectedItemId === 'all' || o.items.some(item => (item.id === selectedItemId || item.parentId === selectedItemId));
       const matchesMinPrice = minPrice === '' || o.total >= Number(minPrice);
       const matchesMaxPrice = maxPrice === '' || o.total <= Number(maxPrice);
       const matchesSearch = 
@@ -79,7 +82,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
         (o.customerName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (o.customerPhone || '').includes(searchQuery);
       
-      return matchesDate && matchesTab && matchesSearch && matchesStaff && matchesMinPrice && matchesMaxPrice && o.status === 'completed';
+      return matchesDate && matchesTab && matchesSearch && matchesStaff && matchesItem && matchesMinPrice && matchesMaxPrice && o.status === 'completed';
     });
 
     return result.sort((a, b) => {
@@ -89,7 +92,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
       if (sortBy === 'price-asc') return a.total - b.total;
       return 0;
     });
-  }, [orders, startDate, endDate, activeTab, searchQuery, selectedStaffId, minPrice, maxPrice, sortBy]);
+  }, [orders, startDate, endDate, activeTab, searchQuery, selectedStaffId, selectedItemId, minPrice, maxPrice, sortBy]);
 
   const currentTabTotal = filteredOrders.reduce((sum, o) => sum + o.total, 0);
 
@@ -112,7 +115,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
              <button onClick={() => setQuickDate('week')} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">Tuần này</button>
              <button onClick={() => setQuickDate('month')} className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">Tháng này</button>
              <div className="w-px h-4 bg-gray-200 mx-1 hidden sm:block"></div>
-             <button onClick={() => { setStartDate(new Date().toLocaleDateString('en-CA')); setEndDate(new Date().toLocaleDateString('en-CA')); setSearchQuery(''); setActiveTab('all'); }} className="p-2 text-gray-400 hover:text-indigo-600 rounded-xl"><RefreshCcw size={16}/></button>
+             <button onClick={() => { setStartDate(new Date().toLocaleDateString('en-CA')); setEndDate(new Date().toLocaleDateString('en-CA')); setSearchQuery(''); setActiveTab('all'); setSelectedItemId('all'); }} className="p-2 text-gray-400 hover:text-indigo-600 rounded-xl"><RefreshCcw size={16}/></button>
           </div>
       </div>
 
@@ -123,25 +126,32 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
             value={rangeStats.total} 
             icon={TrendingUp} 
             color="indigo" 
-            trend="+12%" // Demo trend
+            isActive={activeTab === 'all'}
+            onClick={() => setActiveTab('all')}
           />
           <StatCard 
             label="TIỀN MẶT THỰC THU" 
             value={rangeStats.cash} 
             icon={Wallet} 
             color="orange" 
+            isActive={activeTab === 'cash'}
+            onClick={() => setActiveTab('cash')}
           />
           <StatCard 
             label="CHUYỂN KHOẢN (QR)" 
             value={rangeStats.transfer} 
             icon={CreditCard} 
             color="blue" 
+            isActive={activeTab === 'transfer'}
+            onClick={() => setActiveTab('transfer')}
           />
           <StatCard 
             label="GHI NỢ (CHỜ THU)" 
             value={rangeStats.postpaid} 
             icon={Clock} 
             color="teal" 
+            isActive={activeTab === 'postpaid'}
+            onClick={() => setActiveTab('postpaid')}
           />
       </div>
 
@@ -196,16 +206,27 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
                       </div>
                       <div className="space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                            <ArrowUpDown size={12}/> Sắp xếp
+                            <Coffee size={12}/> Lọc theo món
                           </label>
-                          <select value={sortBy} onChange={e=>setSortBy(e.target.value as any)} className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none font-bold text-gray-700 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                              <option value="time-desc">Mới nhất trước</option>
-                              <option value="time-asc">Cũ nhất trước</option>
-                              <option value="price-desc">Giá trị lớn nhất</option>
-                              <option value="price-asc">Giá trị nhỏ nhất</option>
+                          <select value={selectedItemId} onChange={e=>setSelectedItemId(e.target.value)} className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none font-bold text-gray-700 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 shadow-inner">
+                              <option value="all">Tất cả các món</option>
+                              {menuItems.filter(item => !item.isParent).map(item => (
+                                  <option key={item.id} value={item.id}>{item.name}</option>
+                              ))}
                           </select>
                       </div>
-                      <div className="md:col-span-2 lg:col-span-4 space-y-2">
+                      <div className="md:col-span-2 lg:col-span-2 space-y-2">
+                          <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                            <ArrowUpDown size={12}/> Sắp xếp danh sách
+                          </label>
+                          <select value={sortBy} onChange={e=>setSortBy(e.target.value as any)} className="w-full p-4 bg-gray-50 border-none rounded-2xl outline-none font-bold text-gray-700 text-sm focus:bg-white focus:ring-2 focus:ring-indigo-500 shadow-inner">
+                              <option value="time-desc">Thời gian (Mới nhất)</option>
+                              <option value="time-asc">Thời gian (Cũ nhất)</option>
+                              <option value="price-desc">Giá trị (Cao xuống thấp)</option>
+                              <option value="price-asc">Giá trị (Thấp lên cao)</option>
+                          </select>
+                      </div>
+                      <div className="md:col-span-2 lg:col-span-2 space-y-2">
                           <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-2">Lọc theo giá trị đơn hàng</label>
                           <div className="flex items-center gap-4">
                               <input type="number" placeholder="Từ (đ)" value={minPrice} onChange={e=>setMinPrice(e.target.value)} className="flex-1 p-4 bg-gray-50 border-none rounded-2xl outline-none font-bold text-sm shadow-inner focus:bg-white"/>
@@ -228,7 +249,7 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
                   <button 
                     key={tab.id} 
                     onClick={() => setActiveTab(tab.id as any)} 
-                    className={`flex-1 min-w-[160px] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${activeTab === tab.id ? `${tab.color} text-white shadow-lg` : 'bg-white text-gray-400 hover:text-gray-600 border border-transparent hover:border-gray-200'}`}
+                    className={`flex-1 min-w-[160px] py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${activeTab === tab.id ? `${tab.color} text-white shadow-lg scale-105` : 'bg-white text-gray-400 hover:text-gray-600 border border-transparent hover:border-gray-200'}`}
                   >
                       <tab.icon size={16} />
                       {tab.label}
@@ -335,18 +356,11 @@ const RevenueReport: React.FC<RevenueReportProps> = ({ orders, adminUser, users 
             </table>
         </div>
       </div>
-      
-      {/* Quick Action Footer */}
-      <div className="mt-8 flex justify-center gap-4">
-          <button className="flex items-center gap-2 bg-white px-6 py-3 rounded-2xl border border-gray-100 shadow-sm text-xs font-black uppercase tracking-widest text-gray-500 hover:bg-indigo-50 hover:text-indigo-600 transition-all">
-              <Download size={16}/> Xuất Excel (Báo cáo tháng)
-          </button>
-      </div>
     </div>
   );
 };
 
-const StatCard = ({ label, value, icon: Icon, color, trend }: any) => {
+const StatCard = ({ label, value, icon: Icon, color, isActive, onClick }: any) => {
     const colors: any = {
         indigo: 'from-indigo-600 to-blue-700 text-white shadow-indigo-200',
         orange: 'from-orange-500 to-red-600 text-white shadow-orange-200',
@@ -355,7 +369,10 @@ const StatCard = ({ label, value, icon: Icon, color, trend }: any) => {
     };
     
     return (
-        <div className={`p-8 rounded-[40px] bg-gradient-to-br shadow-2xl ${colors[color]} relative overflow-hidden group hover:-translate-y-2 transition-all duration-500 cursor-pointer`}>
+        <button 
+          onClick={onClick}
+          className={`p-8 rounded-[40px] bg-gradient-to-br shadow-2xl ${colors[color]} relative overflow-hidden group hover:-translate-y-2 hover:shadow-lg transition-all duration-500 cursor-pointer active:scale-95 text-left w-full block ${isActive ? 'ring-4 ring-offset-2 ring-white scale-105 z-10' : 'opacity-90'}`}
+        >
             {/* Background Icon Decoration */}
             <div className="absolute -right-8 -bottom-8 opacity-10 group-hover:scale-125 group-hover:-rotate-12 transition-all duration-700">
                 <Icon size={180} />
@@ -373,18 +390,17 @@ const StatCard = ({ label, value, icon: Icon, color, trend }: any) => {
                     <span className="text-4xl font-black tracking-tighter drop-shadow-md">{value.toLocaleString()}</span>
                     <span className="text-sm font-bold opacity-60 uppercase">vnđ</span>
                 </div>
-
-                {trend && (
-                    <div className="mt-4 flex items-center gap-2">
-                        <div className="px-2 py-0.5 bg-white/20 rounded-full text-[9px] font-black">{trend}</div>
-                        <span className="text-[9px] font-bold opacity-60 uppercase">So với hôm qua</span>
+                
+                {isActive && (
+                    <div className="mt-3 inline-block px-3 py-1 bg-white/20 rounded-full text-[8px] font-black uppercase tracking-widest animate-pulse">
+                        Đang lọc dữ liệu
                     </div>
                 )}
             </div>
             
             {/* Decorative Shine */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-        </div>
+        </button>
     );
 };
 
